@@ -43,7 +43,7 @@ int read_wordlen() {
 	return read_int(5, 8, "choose word length in bits(5-8, default: 8)", bad_input, &def_wordlen);
 }
 
-int stoplen() {
+int read_stoplen() {
 	int def_stoplen = 2;
 	return read_int(1, 2, "choose amount of stop bits(1-2, default: 2)", bad_input, &def_stoplen);
 }
@@ -72,17 +72,20 @@ int read_speed() {
 	return read_int(1, 8, "\0",bad_input, &def_speed);
 }
 
+int read_choice() {
+	printf("1. Initialize port\n");
+	printf("2. Send message\n");
+	printf("3. Receive message\n");
+	printf("4. Port state\n");
+	printf("5. Exit\n");
+
+	return read_int(1, 5, "\0", bad_input, NULL);
+}
+
 int main() {
 	int choice;
 	do {
-		printf("1. Initialize port\n");
-		printf("2. Send message\n");
-		printf("3. Receive message\n");
-		printf("4. Port state\n");
-		printf("5. Exit\n");
-
-		choice = read_int(1, 5, "\0", bad_input, NULL);
-
+		choice = read_choice();
 		switch (choice) {
 			case 1:// init port
 				int port = read_port();
