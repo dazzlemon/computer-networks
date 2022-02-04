@@ -88,11 +88,11 @@ int main() {
 		choice = read_choice();
 		switch (choice) {
 			case 1:// init port
-				int port = read_port();
-				int wordlen = read_wordlen();
-				int stoplen = read_stoplen();
+				int port         = read_port();
+				int wordlen      = read_wordlen();
+				int stoplen      = read_stoplen();
 				int parity_check = read_parity_check();
-				int speed = read_speed();
+				int speed        = read_speed();
 
 				port_init(port, wordlen, stoplen, parity_check, speed);
 			case 2:// send msg
