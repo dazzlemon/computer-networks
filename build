@@ -1,1 +1,1 @@
-gcc main.c -o main
+gcc -std=c2x -pedantic -Wall $* -lm main.c -o main
