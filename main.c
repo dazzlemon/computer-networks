@@ -78,6 +78,14 @@ int read_int(int min, int max, char* prompt, char* err_msg, int* def) {
 	return in;
 }
 
+__uint16_t reverse16(__uint16_t nonreversed ) {
+	__uint16_t reversed = 0;
+	for (__uint16_t i = 0; i < 16; i++) {
+		reversed |= (nonreversed >> (16 - i - 1) & 1) << i;
+  }        
+	return reversed;
+}
+
 /**
  * port = 1-4
  * wordlen = 5-8
@@ -95,19 +103,18 @@ int port_init(__uint16_t port, WORDLEN wordlen, STOPLEN stoplen, PARITY_CHECK pa
 				            | parity_check << 3
 				            | speed        << 5;
 
-
-	params = speed
-	       | parity_check << 3
-				 | stoplen      << 5
-				 | wordlen      << 6;
-	params = ~params;
+	// params = speed
+	//        | parity_check << 3
+	// 			 | stoplen      << 5
+	// 			 | wordlen      << 6;
+	params = reverse16(params);
 
 	__uint16_t result;
 	__asm__(
-		"mov %%dx, %1\n\t"// port
-		"mov %%ax, %2\n\t"// params
+		"mov %1, %%dx\n\t"// port
+		"mov %2, %%ax\n\t"// params
 		"int $0x14\n\t"
-		"mov %0, %%ax\n\t"// result
+		"mov %%ax, %0\n\t"// result
 		: "=r" (result)
 		: "r" (port), "r" (params)
 		: "%ax", "%dx"
