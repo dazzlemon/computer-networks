@@ -1,12 +1,73 @@
 #include <stdio.h>
 #include <math.h>
+#include <string.h>
+
+typedef enum {
+	WORDLEN_5bits = 0b00,
+	WORDLEN_6bits = 0b01,
+	WORDLEN_7bits = 0b10,
+	WORDLEN_8bits = 0b11
+} WORDLEN;
+
+typedef enum {
+	STOPLEN_1bit  = 0b0,
+	STOPLEN_2bits = 0b1
+} STOPLEN;
+
+typedef enum {
+	PARITY_CHECK_NONE  = 0b00,
+	PARITY_CHECK_NONE_ = 0b10,
+	PARITY_CHECK_ODD   = 0b01,
+	PARITY_CHECK_EVEN  = 0b11
+} PARITY_CHECK;
+
+typedef enum {
+	SPEED_100bps  = 0b000,
+	SPEED_150bps  = 0b001,
+	SPEED_300bps  = 0b010,
+	SPEED_600bps  = 0b011,
+	SPEED_1200bps = 0b100,
+	SPEED_2400bps = 0b101,
+	SPEED_4800bps = 0b110,
+	SPEED_9600bps = 0b111
+} SPEED;
 
 char* itoa(int val, int base){
 	static char buf[32] = {0};
 	int i = 30;
 	for(; val && i ; --i, val /= base)
 		buf[i] = "0123456789abcdef"[val % base];
-	return &buf[i+1];
+	return strdup(&buf[i+1]);
+}
+
+void print_enums() {
+	printf("wordlen:\n");
+	printf("%s - %s\n", "5 bits", itoa(WORDLEN_5bits, 2));
+	printf("%s - %s\n", "6 bits", itoa(WORDLEN_6bits, 2));
+	printf("%s - %s\n", "7 bits", itoa(WORDLEN_7bits, 2));
+	printf("%s - %s\n", "8 bits", itoa(WORDLEN_8bits, 2));
+	printf("\n");
+
+	printf("stoplen:\n");
+	printf("%s - %s\n", "1 bit", itoa(STOPLEN_1bit , 2));
+	printf("%s - %s\n", "2 bits", itoa(STOPLEN_2bits, 2));
+	printf("\n");
+
+	printf("%s - %s\n", "NONE" , itoa(PARITY_CHECK_NONE , 2));
+	printf("%s - %s\n", "NONE_", itoa(PARITY_CHECK_NONE_, 2));
+	printf("%s - %s\n", "ODD"  , itoa(PARITY_CHECK_ODD  , 2));
+	printf("%s - %s\n", "EVEN" , itoa(PARITY_CHECK_EVEN , 2));
+	printf("\n");
+		
+	printf("%s - %s\n", "100bps ", itoa(SPEED_100bps , 2));
+	printf("%s - %s\n", "150bps ", itoa(SPEED_150bps , 2));
+	printf("%s - %s\n", "300bps ", itoa(SPEED_300bps , 2));
+	printf("%s - %s\n", "600bps ", itoa(SPEED_600bps , 2));
+	printf("%s - %s\n", "1200bps", itoa(SPEED_1200bps, 2));
+	printf("%s - %s\n", "2400bps", itoa(SPEED_2400bps, 2));
+	printf("%s - %s\n", "4800bps", itoa(SPEED_4800bps, 2));
+	printf("%s - %s\n", "9600bps", itoa(SPEED_9600bps, 2));
+	printf("\n");
 }
 
 int read_int(int min, int max, char* prompt, char* err_msg, int* def) {
@@ -27,61 +88,30 @@ int read_int(int min, int max, char* prompt, char* err_msg, int* def) {
  * 		2: check for odd
  * speed = 100/150/300/600/1200/2400/4800/9600 (bit/s)
  */
-int port_init(int port, int wordlen, int stoplen, int parity_check, int speed) {
-	/**
-	 * 5 00 0
-	 * 6 01 1
-	 * 7 10 2
-	 * 8 11 3
-	 */
-	printf("wordlen:\n");	
-	for (int i = 5; i < 9; i++) {
-		printf("%d bit - %s\n", i, itoa(i - 5, 2));
-	}
-	printf("\n");
+int port_init(__uint16_t port, WORDLEN wordlen, STOPLEN stoplen, PARITY_CHECK parity_check, SPEED speed) {
+	// ah would be 0 anyways
+	__uint16_t params = wordlen
+	                  | stoplen      << 2
+				            | parity_check << 3
+				            | speed        << 5;
 
-	printf("stoplen:\n");
-	for (int i = 1; i < 3; i++) {
-		printf("%d bit - %s\n", i, itoa(i - 1, 2));
-	}
-	printf("\n");
 
-	printf("parity:\n");
-	for (int i = 0; i < 3; i++) {
-		if (i == 0) {
-			printf("no parity check");// 00 10
-		} else if (i == 1) {
-			printf("parity check");// 11
-		} else if (i == 2) {
-			printf("odd check");// 01
-		}
-		int i_ = i == 0 ? i//no check 00 10
-		       : i == 1 ? 0b11 //even
-					 : /*i == 2 ?*/ 0b01;// odd
-		printf(": - %s\n", itoa(i_, 2));
-	}
-	printf("\n");
+	params = speed
+	       | parity_check << 3
+				 | stoplen      << 5
+				 | wordlen      << 6;
+	params = ~params;
 
-	printf("speed:\n");
-	printf("100 bit/s - %s\n", itoa(0b000, 2));
-	for (int i = 150; i <= 9600; i *= 2) {
-		printf("%d bit/s - %s\n", i, itoa(log2l(i / 150) + 1, 2));
-	}
-
-	// char al = 0b0;
-	// al &= wordlen - 5;
-	// al &= stoplen - 1;
-
-	// int params;
-	// int result;
-	// __asm__(
-	// 	"mov ah, 00h\n\t"
-	// 	"mov dx, %0\n\t"
-	// 	"mov al, %1\n\t"
-	// 	"int 14h\n\t"
-	// 	: "=r" (result)
-	// 	: "r" (port, params)
-	// );
+	__uint16_t result;
+	__asm__(
+		"mov %%dx, %1\n\t"// port
+		"mov %%ax, %2\n\t"// params
+		"int $0x14\n\t"
+		"mov %0, %%ax\n\t"// result
+		: "=r" (result)
+		: "r" (port), "r" (params)
+		: "%ax", "%dx"
+	);
 	return 0;
 }
 
@@ -125,10 +155,16 @@ int read_speed() {
 
 int read_choice() {
 	printf("1. Initialize port\n");
-	printf("2. Send message\n");
-	printf("3. Receive message\n");
-	printf("4. Port state\n");
-	printf("5. Exit\n");
+	printf("2. Initialize port default\n");
+	printf("\t wordlen = 8bits\n");
+	printf("\t stoplen = 2bits\n");
+	printf("\t parity check = even\n");
+	printf("\t speed = 4800bps\n");
+
+	printf("3. Send message\n");
+	printf("4. Receive message\n");
+	printf("5. Port state\n");
+	printf("6. Exit\n");
 
 	return read_int(1, 5, "\0", bad_input, NULL);
 }
@@ -139,18 +175,22 @@ int main() {
 		choice = read_choice();
 		switch (choice) {
 			case 1: {// init port
-				int port         = read_port();
-				int wordlen      = read_wordlen();
-				int stoplen      = read_stoplen();
-				int parity_check = read_parity_check();
-				int speed        = read_speed();
+				int          port         = read_port();
+		    WORDLEN      wordlen      = read_wordlen();
+				STOPLEN      stoplen      = read_stoplen();
+				PARITY_CHECK parity_check = read_parity_check();
+				SPEED        speed        = read_speed();
 				port_init(port, wordlen, stoplen, parity_check, speed);
 				break;
 			}
-			case 2:// send msg
-			case 3:// read msg
-			case 4:// port state
-			// case 5: // break;
+			case 2: {// init port default
+				int port = read_port();
+				port_init(port, WORDLEN_8bits, STOPLEN_2bits, PARITY_CHECK_EVEN, SPEED_4800bps);
+			}
+			case 3:// send msg
+			case 4:// read msg
+			case 5:// port state
+			// case 6: // break;
 			default: break; // never happens cause read_int should only return values >1 and <5
 		}
 	} while (choice != 5);
