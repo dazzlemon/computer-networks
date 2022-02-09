@@ -1,4 +1,5 @@
 #include <stdio.h>
+#include <stdlib.h>
 #include <math.h>
 #include <string.h>
 
@@ -11,7 +12,7 @@ char* read_string(FILE* fp, size_t size){
 
 	size_t len = 0;
 	int ch;
-	while (ch = fgetc(fp) != EOF && ch != '\n') {
+	while ((ch = fgetc(fp)) != EOF && ch != '\n') {
 		str[len++] = ch;
 		if (len == size) {
 			size += 16;
@@ -128,9 +129,9 @@ int port_init(__uint16_t port, WORDLEN wordlen, STOPLEN stoplen, PARITY_CHECK pa
 
 	// params = speed
 	//        | parity_check << 3
-	// 			 | stoplen      << 5
-	// 			 | wordlen      << 6;
-	params = reverse16(params);
+	// 			  | stoplen      << 5
+	// 			  | wordlen      << 6;
+	// params = reverse16(params);
 
 	__uint16_t result;
 	__asm__(
@@ -224,11 +225,11 @@ void send_byte(char byte) {
 	char res;
 	do {
 		__asm__(
-			"mov 0, %%dx"
-			"mov 1, %%ah"
-			"mov %1, %%al"// byte
-			"int $0x14"
-			"mov %%ah, %0"// res
+			"mov 0, %%dx\n\t"
+			"mov 1, %%ah\n\t"
+			"mov %1, %%al\n\t"// byte
+			"int $0x14\n\t"
+			"mov %%ah, %0\n\t"// res
 			: "=r" (res)
 			: "r" (byte)
 			: "%ax", "%dx"
@@ -243,19 +244,23 @@ void send_string(char* msg) {
 }
 
 char receive_byte() {
-	char res;
+	char err;
 	char byte;
 	do {
 		__asm__(
-			"mov 0, %%dx"
-			"mov 2, %%ah"
-			"int $0x14"
-			"mov %%ah, %0"
-			: "=r" (res), "=r" (byte)
+			"mov 0, %%dx\n\t"
+			"mov 2, %%ah\n\t"
+			"int $0x14\n\t"
+			"mov %%al, %1\n\t"
+			// Error: can't encode register '%ah' in an instruction requiring REX prefix. (mov %%ah, %0)
+			"mov %%ah, %%al\n\t"
+			"mov %%al, %0\n\t"
+			: "=r" (err), "=r" (byte)
 			: "r" (NULL)
 			: "%ax", "%dx"
 		);
-	} while (res);
+	} while (err);
+	return byte;
 }
 
 char* receive_string(size_t size) {
@@ -267,7 +272,7 @@ char* receive_string(size_t size) {
 
 	size_t len = 0;
 	int ch;
-	while (ch = receive_byte()) {
+	while ((ch = receive_byte())) {
 		str[len++] = ch;
 		if (len == size) {
 			size += 16;
