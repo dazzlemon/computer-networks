@@ -236,10 +236,49 @@ void send_byte(char byte) {
 	} while ((res >> 7) & 1);
 }
 
-void send_msg(char* msg) {
+void send_string(char* msg) {
 	do {
 		send_byte(*msg);
 	} while (*(msg++));
+}
+
+char receive_byte() {
+	char res;
+	char byte;
+	do {
+		__asm__(
+			"mov 0, %%dx"
+			"mov 2, %%ah"
+			"int $0x14"
+			"mov %%ah, %0"
+			: "=r" (res), "=r" (byte)
+			: "r" (NULL)
+			: "%ax", "%dx"
+		);
+	} while (res);
+}
+
+char* receive_string(size_t size) {
+	char* str;
+	str = realloc(NULL, sizeof(*str) * size);
+	if (!str) {
+		return str;
+	}
+
+	size_t len = 0;
+	int ch;
+	while (ch = receive_byte()) {
+		str[len++] = ch;
+		if (len == size) {
+			size += 16;
+			str = realloc(str, sizeof(*str) * size);
+			if (!str) {
+				return str;
+			}
+		}
+	}
+	str[len++] = '\0';
+	return realloc(str, sizeof(*str)*len);
 }
 
 int main() {
@@ -263,12 +302,12 @@ int main() {
 			}
 			case 3: {// send msg
 				char* msg = read_string(stdin, 16);
-				send_msg(msg);
+				send_string(msg);
 				break;
 			}
-			case 4: {// read msg
-				// TODO: read message
-				// TODO: print message to console
+			case 4: {// receive msg
+				char* msg = receive_string(16);
+				printf(msg);
 				break;
 			}
 			case 5: {// port state
