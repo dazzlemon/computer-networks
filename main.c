@@ -119,6 +119,27 @@ int port_init(__uint16_t port, WORDLEN wordlen, STOPLEN stoplen, PARITY_CHECK pa
 		: "r" (port), "r" (params)
 		: "%ax", "%dx"
 	);
+	/**
+	 * TODO: destructure result
+	 * ah - port state
+	 * 		0 timeout, if true other bits dont matter
+	 * 		1 offset register empty
+	 * 		2 buffer register empty
+	 * 		3 BREAK
+	 * 		4 sync error
+	 * 		5 parity error
+	 * 		6 input register overflow
+	 * 		7 data is ready
+	 * al - modem state
+	 * 		0 CTS state change
+	 * 		1 DSR state change
+	 * 		2 RI  state change
+	 * 		3 DCD state change
+	 * 		4 CTS state
+	 * 		5 DSR state
+	 * 		6 RI  state
+	 * 		7 DCD state
+	 */
 	return 0;
 }
 
@@ -189,14 +210,27 @@ int main() {
 				SPEED        speed        = read_speed();
 				port_init(port, wordlen, stoplen, parity_check, speed);
 				break;
-			}
+			} 
 			case 2: {// init port default
 				int port = read_port();
 				port_init(port, WORDLEN_8bits, STOPLEN_2bits, PARITY_CHECK_EVEN, SPEED_4800bps);
+				break;
 			}
-			case 3:// send msg
-			case 4:// read msg
-			case 5:// port state
+			case 3: {// send msg
+				// TODO: read message from console
+				// TODO: send message
+				break;
+			}
+			case 4: {// read msg
+				// TODO: read message
+				// TODO: print message to console
+				break;
+			}
+			case 5: {// port state
+				// TODO: get port state
+				// TODO: print port state
+				break;
+			}
 			// case 6: // break;
 			default: break; // never happens cause read_int should only return values >1 and <5
 		}
