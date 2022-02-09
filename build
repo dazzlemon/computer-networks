@@ -1,1 +1,4 @@
-gcc -std=c2x -pedantic -Wall $* -lm main.c -o main
+gcc -std=c2x -g -pedantic -Wall $* -lm -o main \
+	main.c \
+	serial_port.h \
+	util.h
