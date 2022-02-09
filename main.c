@@ -2,6 +2,29 @@
 #include <math.h>
 #include <string.h>
 
+char* read_string(FILE* fp, size_t size){
+	char* str;
+	str = realloc(NULL, sizeof(*str) * size);
+	if (!str) {
+		return str;
+	}
+
+	size_t len = 0;
+	int ch;
+	while (ch = fgetc(fp) != EOF && ch != '\n') {
+		str[len++] = ch;
+		if (len == size) {
+			size += 16;
+			str = realloc(str, sizeof(*str) * size);
+			if (!str) {
+				return str;
+			}
+		}
+	}
+	str[len++] = '\0';
+	return realloc(str, sizeof(*str)*len);
+}
+
 typedef enum {
 	WORDLEN_5bits = 0b00,
 	WORDLEN_6bits = 0b01,
@@ -71,7 +94,7 @@ void print_enums() {
 }
 
 int read_int(int min, int max, char* prompt, char* err_msg, int* def) {
-	// TODO: allow default return
+	// TODO: allow default return + validation
 	printf(prompt);
 	int in;
 	scanf("%d", &in);
@@ -197,6 +220,28 @@ int read_choice() {
 	return read_int(1, 5, "\0", bad_input, NULL);
 }
 
+void send_byte(char byte) {
+	char res;
+	do {
+		__asm__(
+			"mov 0, %%dx"
+			"mov 1, %%ah"
+			"mov %1, %%al"// byte
+			"int $0x14"
+			"mov %%ah, %0"// res
+			: "=r" (res)
+			: "r" (byte)
+			: "%ax", "%dx"
+		);
+	} while ((res >> 7) & 1);
+}
+
+void send_msg(char* msg) {
+	do {
+		send_byte(*msg);
+	} while (*(msg++));
+}
+
 int main() {
 	int choice;
 	do {
@@ -217,8 +262,8 @@ int main() {
 				break;
 			}
 			case 3: {// send msg
-				// TODO: read message from console
-				// TODO: send message
+				char* msg = read_string(stdin, 16);
+				send_msg(msg);
 				break;
 			}
 			case 4: {// read msg
