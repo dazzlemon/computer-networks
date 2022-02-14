@@ -1,5 +1,6 @@
 #include <conio.h>
 #include <iostream.h>
+#include <stdlib.h>
 
 typedef enum {
 	WORDLEN_5bits = 0,// 0b00
@@ -33,14 +34,14 @@ typedef enum {
 
 int port_status();
 
-void send_byte(char byte) {
+void send_byte(unsigned short port, char byte) {
 	char res;
 	do {
 		asm {
 			push dx
 			push ax
 
-			mov dx, 0
+			mov dx, port
 			mov ah, 1
 			mov al, byte
 			int 14h
@@ -52,25 +53,26 @@ void send_byte(char byte) {
 	} while ((res >> 7) & 1);
 }
 
-char receive_byte() {
+char receive_byte(unsigned short port) {
 	char err;
-	char byte;
+	char byte_;
 	do {
 		asm {
 			push dx
 			push ax
 
-			mov dx, 0
+			mov dx, port
 			mov ah, 2
 			int 14h
-			mov [byte], al
 			mov err, ah
+
+			mov byte_, al
 
 			pop ax
 			pop dx
 		}
 	} while (err);
-	return byte;
+	return byte_;
 }
 
 
@@ -124,8 +126,8 @@ int port_init(unsigned short port, WORDLEN wordlen, STOPLEN stoplen, PARITY_CHEC
 	return 0;
 }
 
-// int main(int argc, char* argv[]) {
-int main() {
+int main(int argc, char* argv[]) {
+	unsigned short port = atoi(argv[1]);// 0 - com1, 1 - com2, 2 - com3, 3 - com4
 	int choice;
 	do {
 		cout << "1. init\n";
@@ -135,16 +137,16 @@ int main() {
 		cin >> choice;
 		switch (choice) {
 			case 1:
-				port_init(0, WORDLEN_8bits, STOPLEN_2bits, PARITY_CHECK_EVEN, SPEED_4800bps);
+				port_init(port, WORDLEN_8bits, STOPLEN_2bits, PARITY_CHECK_EVEN, SPEED_4800bps);
 				break;
 			case 2:
 				char byte;
 				cout << "input byte: ";
 				cin >> byte;
-				send_byte(byte);
+				send_byte(port, byte);
 				break;
 			case 3:
-				cout << receive_byte() << '\n';
+				cout << receive_byte(port) << '\n';
 				break;
 			default: break;
 		}
