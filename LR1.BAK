@@ -63,7 +63,7 @@ char receive_byte() {
 			mov dx, 0
 			mov ah, 2
 			int 14h
-			mov [byte], al
+			mov byte, al
 			mov err, ah
 
 			pop ax
@@ -135,7 +135,7 @@ int main() {
 		cin >> choice;
 		switch (choice) {
 			case 1:
-				port_init(0, WORDLEN_8bits, STOPLEN_2bits, PARITY_CHECK_EVEN, SPEED_4800bps);
+				port_init(1, WORDLEN_8bits, STOPLEN_2bits, PARITY_CHECK_EVEN, SPEED_4800bps);
 				break;
 			case 2:
 				char byte;
