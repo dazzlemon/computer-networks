@@ -1,0 +1,14 @@
+{
+    "configurations": [
+        {
+            "name": "Linux",
+            "includePath": [
+                "/opt/watcom/h/"
+            ],
+            "defines": [],
+            "compilerPath": "/opt/watcom/h/iostream.h",
+            "cStandard": "gnu17"
+        }
+    ],
+    "version": 4
+}

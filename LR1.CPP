@@ -1,155 +1,144 @@
-#include <conio.h>
+// Safonov Danylo pz1911(931)
 #include <iostream.h>
+#include <stdio.h>
+#include <conio.h>
 #include <stdlib.h>
 
-typedef enum {
-	WORDLEN_5bits = 0,// 0b00
-	WORDLEN_6bits = 1,// 0b01
-	WORDLEN_7bits = 2,// 0b10
-	WORDLEN_8bits = 3 // 0b11
-} WORDLEN;
-
-typedef enum {
-	STOPLEN_1bit  = 0,
-	STOPLEN_2bits = 1
-} STOPLEN;
-
-typedef enum {
-	PARITY_CHECK_NONE  = 0,// 0b00
-	PARITY_CHECK_NONE_ = 2,// 0b10
-	PARITY_CHECK_ODD   = 1,// 0b01
-	PARITY_CHECK_EVEN  = 3 // 0b11
-} PARITY_CHECK;
-
-typedef enum {
-	SPEED_100bps  = 0,// 0b000
-	SPEED_150bps  = 1,// 0b001
-	SPEED_300bps  = 2,// 0b010
-	SPEED_600bps  = 3,// 0b011
-	SPEED_1200bps = 4,// 0b100
-	SPEED_2400bps = 5,// 0b101
-	SPEED_4800bps = 6,// 0b110
-	SPEED_9600bps = 7,// 0b111
-} SPEED;
-
-int port_status();
-
-void send_byte(unsigned short port, char byte) {
-	char res;
-	do {
-		asm {
-			push dx
-			push ax
-
-			mov dx, port
-			mov ah, 1
-			mov al, byte
-			int 14h
-			mov res, ah
-
-			pop ax
-			pop dx
-		}
-	} while ((res >> 7) & 1);
+short portNumber() {
+	short pt;
+	clrscr();
+	printf("Port number: ");
+	scanf("%d",&pt);
+	return pt - 1;// when passing it as argument to interruption it is 0 indexed
 }
 
-char receive_byte(unsigned short port) {
-	char err;
-	char byte_;
-	do {
-		asm {
-			push dx
-			push ax
+// params
+//          D0 D1 |             D2 |        D3 D4 |       D5 D6 D7 
+// word len(bits) | stop len(bits) | parity check | transfer speed 
+void initialize(char params) {
+	char res;    
+	short pt = portNumber();
 
-			mov dx, port
-			mov ah, 2
-			int 14h
-			mov err, ah
-
-			mov byte_, al
-
-			pop ax
-			pop dx
-		}
-	} while (err);
-	return byte_;
-}
-
-
-int port_init(unsigned short port, WORDLEN wordlen, STOPLEN stoplen, PARITY_CHECK parity_check, SPEED speed) {
-	// ah would be 0 anyways
-	unsigned short params = wordlen
-	                      | stoplen      << 2
-	                      | parity_check << 3
-	                      | speed        << 5;
-
-	// params = speed
-	//        | parity_check << 3
-	// 			  | stoplen      << 5
-	// 			  | wordlen      << 6;
-	// params = reverse16(params);
-
-	unsigned short result;
-	asm {
+	_asm {
 		push ax
 		push dx
 
-		mov dx, port
-		mov ax, params
-		int 14h
-		mov result, ax
-
-		pop ax
+		mov ah, 00h
+		mov dx, pt
+		mov al, params
+		INT 14h
+		mov res, ah
+		
 		pop dx
+		pop ax
 	}
-	/**
-	 * TODO: destructure result
-	 * ah - port state
-	 * 		0 timeout, if true other bits dont matter
-	 * 		1 offset register empty
-	 * 		2 buffer register empty
-	 * 		3 BREAK
-	 * 		4 sync error
-	 * 		5 parity error
-	 * 		6 input register overflow
-	 * 		7 data is ready
-	 * al - modem state
-	 * 		0 CTS state change
-	 * 		1 DSR state change
-	 * 		2 RI  state change
-	 * 		3 DCD state change
-	 * 		4 CTS state
-	 * 		5 DSR state
-	 * 		6 RI  state
-	 * 		7 DCD state
-	 */
-	return 0;
+
+	cout << "\n\nPort's state:\n" << res << endl;
+	int value = (int)res;
+	for (int i = 7; i >= 0; i--) {
+		cout << (1 << i) & value;
+	}
+	getch();
 }
 
-int main(int argc, char* argv[]) {
-	unsigned short port = atoi(argv[1]);// 0 - com1, 1 - com2, 2 - com3, 3 - com4
-	int choice;
+void send(char* str) {
+	char res, s;
+	short pt = portNumber();
+
 	do {
-		cout << "1. init\n";
-		cout << "2. send\n";
-		cout << "3. receive\n";
-		cout << "4. end\n";
-		cin >> choice;
-		switch (choice) {
-			case 1:
-				port_init(port, WORDLEN_8bits, STOPLEN_2bits, PARITY_CHECK_EVEN, SPEED_4800bps);
+		do {
+			s = *str;
+			_asm {
+				push ax
+				push dx
+
+				mov ah, 01h
+				mov dx, pt
+				mov al, s
+				INT 14h
+				mov res, ah
+				
+				pop dx
+				pop ax
+			}
+		} while (res & 0x80);// 10000000 binary => error
+	} while (*str++);        
+	cout << "Send finished \n";
+}
+
+void recieve(char* str) {
+	char err;
+	char data;
+	short pt = portNumber();
+
+	do {
+		do {
+			_asm {
+				push ax
+				push dx
+
+				mov ah, 02h
+				mov dx, pt
+				INT 14h
+				mov err, ah
+				mov data, al
+				
+				pop dx
+				pop ax
+			}
+		} while (err);
+		str[i] = data;
+	} while (str[i++]);
+}
+
+int main() {
+	clrscr();
+	bool exit = false;
+	while (!exit) {
+		cout << "Menu \n"
+		     << "1.Initilize \port \n"
+		     << "2.Send message \n"
+		     << "3.Recieve message \n"
+		     << "4.Exit\n\n Make your choice=>> ";
+		int option;
+		cin >> option;
+		switch (option) {
+			case 1: {
+				int speed;
+				cout << "Choose speed\n"
+				     << "1.100 b/s\n"//  192 = 11000000
+				     << "2.150 b/s\n"//  193 = 11000001
+				     << "3.300 b/s\n"//  194 = 11000010
+				     << "4.600 b/s\n"//  195 = 11000011
+				     << "5.1200 b/s\n"// 196 = 11000100
+				     << "6.2400 b/s\n"// 197 = 11000101
+				     << "7.4800 b/s\n"// 198 = 11000110
+				     << "8.9600 b/s\n"// 199 = 11000111
+				     << "Your choise - ";
+				cin >> speed;
+				initialize(speed + 191);
 				break;
-			case 2:
-				char byte;
-				cout << "input byte: ";
-				cin >> byte;
-				send_byte(port, byte);
+			}
+			case 2: {
+				char str[256];
+				cout << "Sended message: ";
+				gets(str);
+				send(str); 
+				getch();// wait for newline
 				break;
-			case 3:
-				cout << receive_byte(port) << '\n';
+			}
+			case 3: {
+				char str[256];
+				recieve(str);      
+				cout << "Recieved string: " << str;
+				getch();// wait for newline
 				break;
-			default: break;
+			}
+			default: {
+				exit = true;
+				break;
+			}
 		}
-	} while (choice != 4);
-    return 0;
+	}
+	return 0;
 }
