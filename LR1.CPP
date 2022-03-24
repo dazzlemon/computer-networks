@@ -8,7 +8,7 @@ short portNumber() {
 	short pt;
 	clrscr();
 	printf("Port number: ");
-	scanf("%d",&pt);
+	scanf("%d", &pt);
 	return pt - 1;// when passing it as argument to interruption it is 0 indexed
 }
 
@@ -44,7 +44,6 @@ void initialize(char params) {
 void send(char* str) {
 	char res, s;
 	short pt = portNumber();
-
 	do {
 		do {
 			s = *str;
@@ -62,7 +61,7 @@ void send(char* str) {
 				pop ax
 			}
 		} while (res & 0x80);// 10000000 binary => error
-	} while (*str++);        
+	} while (*(str++));        
 	cout << "Send finished \n";
 }
 
